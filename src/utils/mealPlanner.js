@@ -39,18 +39,24 @@ export const generateWeeklyMealPlan = () => {
     // 30% chance of leftovers if we have recipes used only once
     const availableForLeftovers = Array.from(recipeUsageCount.entries())
       .filter(([id, count]) => count === 1)
-      .map(([id]) => [...lunchPool, ...dinnerPool].find(r => r.id === parseInt(id)));
+      .map(([id]) => [...lunchPool, ...dinnerPool].find(r => r.id.toString() === id))
+      .filter(r => r !== undefined);
     
     if (availableForLeftovers.length > 0 && Math.random() < 0.3 && index > 1) {
       lunchRecipe = availableForLeftovers[Math.floor(Math.random() * availableForLeftovers.length)];
     } else {
       // Select a random lunch recipe
       const availableLunchRecipes = lunchPool.filter(recipe => 
-        !recipeUsageCount.has(recipe.id.toString()) || recipeUsageCount.get(recipe.id.toString()) < 2
+        recipe && recipe.id && (!recipeUsageCount.has(recipe.id.toString()) || recipeUsageCount.get(recipe.id.toString()) < 2)
       );
       lunchRecipe = availableLunchRecipes.length > 0 
         ? availableLunchRecipes[Math.floor(Math.random() * availableLunchRecipes.length)]
         : lunchPool[Math.floor(Math.random() * lunchPool.length)];
+    }
+    
+    // Safety check
+    if (!lunchRecipe || !lunchRecipe.id) {
+      lunchRecipe = lunchPool[0]; // fallback to first recipe
     }
     
     const isLunchLeftover = recipeUsageCount.has(lunchRecipe.id.toString());
@@ -62,19 +68,25 @@ export const generateWeeklyMealPlan = () => {
     // 30% chance of leftovers if we have recipes used only once
     const availableForDinnerLeftovers = Array.from(recipeUsageCount.entries())
       .filter(([id, count]) => count === 1 && id !== lunchRecipe.id.toString())
-      .map(([id]) => [...lunchPool, ...dinnerPool].find(r => r.id === parseInt(id)));
+      .map(([id]) => [...lunchPool, ...dinnerPool].find(r => r.id.toString() === id))
+      .filter(r => r !== undefined);
     
     if (availableForDinnerLeftovers.length > 0 && Math.random() < 0.3 && index > 1) {
       dinnerRecipe = availableForDinnerLeftovers[Math.floor(Math.random() * availableForDinnerLeftovers.length)];
     } else {
       // Select a random dinner recipe
       const availableDinnerRecipes = dinnerPool.filter(recipe => 
-        recipe.id !== lunchRecipe.id && 
+        recipe && recipe.id && recipe.id !== lunchRecipe.id && 
         (!recipeUsageCount.has(recipe.id.toString()) || recipeUsageCount.get(recipe.id.toString()) < 2)
       );
       dinnerRecipe = availableDinnerRecipes.length > 0 
         ? availableDinnerRecipes[Math.floor(Math.random() * availableDinnerRecipes.length)]
-        : dinnerPool.filter(r => r.id !== lunchRecipe.id)[Math.floor(Math.random() * (dinnerPool.length - 1))];
+        : dinnerPool.filter(r => r && r.id && r.id !== lunchRecipe.id)[Math.floor(Math.random() * (dinnerPool.length - 1))];
+    }
+    
+    // Safety check
+    if (!dinnerRecipe || !dinnerRecipe.id) {
+      dinnerRecipe = dinnerPool.find(r => r.id !== lunchRecipe.id) || dinnerPool[0]; // fallback
     }
     
     const isDinnerLeftover = recipeUsageCount.has(dinnerRecipe.id.toString());
